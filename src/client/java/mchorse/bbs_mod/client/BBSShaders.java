@@ -18,6 +18,9 @@ public class BBSShaders
     private static ShaderProgram multiLink;
     private static ShaderProgram subtitles;
     private static ShaderProgram selection;
+    private static ShaderProgram pixelArt;
+    private static ShaderProgram pixelArtText;
+    private static ShaderProgram pixelArtTextIntensity;
 
     private static ShaderProgram pickerPreview;
     private static ShaderProgram pickerBillboard;
@@ -35,6 +38,9 @@ public class BBSShaders
         if (model != null) model.close();
         if (subtitles != null) subtitles.close();
         if (selection != null) selection.close();
+        if (pixelArt != null) pixelArt.close();
+        if (pixelArtText != null) pixelArtText.close();
+        if (pixelArtTextIntensity != null) pixelArtTextIntensity.close();
 
         if (pickerPreview != null) pickerPreview.close();
         if (pickerBillboard != null) pickerBillboard.close();
@@ -61,6 +67,30 @@ public class BBSShaders
         {
             e.printStackTrace();
         }
+
+        /* Kept in a try of their own: these are a cosmetic nicety, and a driver
+         * that refuses to compile them must not take the shaders the editor
+         * can't work without (bone picking, models) down with them. Everything
+         * asking for these falls back to vanilla's programs when they're null. */
+        try
+        {
+            ResourceFactory factory = new ProxyResourceFactory(MinecraftClient.getInstance().getResourceManager());
+
+            pixelArt = new ShaderProgram(factory, "pixelart", VertexFormats.POSITION_TEXTURE_COLOR);
+            pixelArtText = new ShaderProgram(factory, "pixelart_text", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT);
+            pixelArtTextIntensity = new ShaderProgram(factory, "pixelart_text_intensity", VertexFormats.POSITION_COLOR_TEXTURE_LIGHT);
+        }
+        catch (IOException e)
+        {
+            /* All or nothing: text must not end up half swapped */
+            if (pixelArt != null) pixelArt.close();
+            if (pixelArtText != null) pixelArtText.close();
+            if (pixelArtTextIntensity != null) pixelArtTextIntensity.close();
+
+            pixelArt = pixelArtText = pixelArtTextIntensity = null;
+
+            e.printStackTrace();
+        }
     }
 
     public static ShaderProgram getModel()
@@ -81,6 +111,25 @@ public class BBSShaders
     public static ShaderProgram getSelectionProgram()
     {
         return selection;
+    }
+
+    /**
+     * Textured UI quads with the seam between texels smoothed, for when the
+     * interface is drawn at a fractional scale (see the shader's own comment).
+     */
+    public static ShaderProgram getPixelArtProgram()
+    {
+        return pixelArt;
+    }
+
+    public static ShaderProgram getPixelArtTextProgram()
+    {
+        return pixelArtText;
+    }
+
+    public static ShaderProgram getPixelArtTextIntensityProgram()
+    {
+        return pixelArtTextIntensity;
     }
 
     public static ShaderProgram getPickerPreviewProgram()
@@ -123,6 +172,18 @@ public class BBSShaders
             if (id.getPath().contains("/core/"))
             {
                 return this.manager.getResource(Identifier.of(BBSMod.MOD_ID, id.getPath()));
+            }
+
+            /* #moj_import always resolves in the minecraft namespace, so our own
+             * includes have to be looked up in BBS first, vanilla's second */
+            if (id.getPath().contains("/include/"))
+            {
+                Optional<Resource> resource = this.manager.getResource(new Identifier(BBSMod.MOD_ID, id.getPath()));
+
+                if (resource.isPresent())
+                {
+                    return resource;
+                }
             }
 
             return this.manager.getResource(id);

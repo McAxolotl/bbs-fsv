@@ -7,8 +7,10 @@ import mchorse.bbs_mod.camera.controller.CameraController;
 import mchorse.bbs_mod.camera.controller.ICameraController;
 import mchorse.bbs_mod.camera.controller.PlayCameraController;
 import mchorse.bbs_mod.client.BBSRendering;
+import mchorse.bbs_mod.client.PixelArt;
 import mchorse.bbs_mod.items.GunZoom;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.math.MatrixStack;
@@ -91,6 +93,34 @@ public class GameRendererMixin
     private void onWorldRenderBegin(CallbackInfo callbackInfo)
     {
         BBSRendering.onWorldRenderBegin();
+    }
+
+    /**
+     * These two injections hand text over to the pixel art shaders while BBS's
+     * UI is drawing, so glyphs stay even at a fractional ui_scale. Both text
+     * programs are shared with the world's text, hence PixelArt gating them on
+     * the UI actually being on screen.
+     */
+    @Inject(method = "getRenderTypeTextProgram", at = @At("HEAD"), cancellable = true)
+    private static void onGetRenderTypeTextProgram(CallbackInfoReturnable<ShaderProgram> info)
+    {
+        ShaderProgram program = PixelArt.getTextProgram(false);
+
+        if (program != null)
+        {
+            info.setReturnValue(program);
+        }
+    }
+
+    @Inject(method = "getRenderTypeTextIntensityProgram", at = @At("HEAD"), cancellable = true)
+    private static void onGetRenderTypeTextIntensityProgram(CallbackInfoReturnable<ShaderProgram> info)
+    {
+        ShaderProgram program = PixelArt.getTextProgram(true);
+
+        if (program != null)
+        {
+            info.setReturnValue(program);
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package mchorse.bbs_mod.ui.framework;
 
 import mchorse.bbs_mod.BBSModClient;
 import mchorse.bbs_mod.client.BBSRendering;
+import mchorse.bbs_mod.client.PixelArt;
 import mchorse.bbs_mod.importers.IImportPathProvider;
 import mchorse.bbs_mod.importers.ImporterContext;
 import mchorse.bbs_mod.importers.Importers;
@@ -191,13 +192,25 @@ public class UIScreen extends Screen implements IFileDropListener
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta)
     {
-        super.render(context, mouseX, mouseY, delta);
+        /* Text is drawn with vanilla's programs, which are shared with the
+         * world's text, so the pixel art ones are only allowed for the span
+         * where BBS's UI is what's being drawn */
+        PixelArt.setDrawingUI(true);
 
-        RenderTickCounter tick = this.client.getRenderTickCounter();
+        try
+        {
+            super.render(context, mouseX, mouseY, delta);
 
-        this.menu.context.setTransition(tick instanceof RenderTickCounterAccessor accessor ? accessor.bbs$getTickDelta() : tick.getTickDelta(false));
-        this.menu.renderMenu(this.context, mouseX, mouseY);
-        this.menu.context.render.executeRunnables();
+            RenderTickCounter tick = this.client.getRenderTickCounter();
+
+            this.menu.context.setTransition(tick instanceof RenderTickCounterAccessor accessor ? accessor.bbs$getTickDelta() : tick.getTickDelta(false));
+            this.menu.renderMenu(this.context, mouseX, mouseY);
+            this.menu.context.render.executeRunnables();
+        }
+        finally
+        {
+            PixelArt.setDrawingUI(false);
+        }
     }
 
     @Override
