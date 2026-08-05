@@ -178,7 +178,7 @@ public class BBSShaders
              * includes have to be looked up in BBS first, vanilla's second */
             if (id.getPath().contains("/include/"))
             {
-                Optional<Resource> resource = this.manager.getResource(new Identifier(BBSMod.MOD_ID, id.getPath()));
+                Optional<Resource> resource = this.manager.getResource(Identifier.of(BBSMod.MOD_ID, id.getPath()));
 
                 if (resource.isPresent())
                 {
