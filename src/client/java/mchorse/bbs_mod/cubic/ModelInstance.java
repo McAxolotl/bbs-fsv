@@ -627,7 +627,9 @@ public class ModelInstance implements IModelInstance
 
         if (split)
         {
-            FormTranslucentQueue.add(new FormTranslucentQueue.VertexBufferCommand(buffer, () -> shader, texture, modelView, normalMat, origin, this.isCulling(), null, null));
+            /* Depth stays on: this is solid geometry, so its semi-transparent texels must occlude
+             * the ones behind them inside the same model — see the split constructors' note. */
+            FormTranslucentQueue.add(new FormTranslucentQueue.VertexBufferCommand(buffer, () -> shader, FormTranslucentQueue.PASS_TRANSLUCENT, true, texture, modelView, normalMat, origin, this.isCulling(), null, null));
         }
         else
         {

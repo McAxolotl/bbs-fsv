@@ -92,8 +92,8 @@ public class CustomVertexConsumerProvider extends VertexConsumerProvider.Immedia
     {
         Vector3f origin = FormTranslucentQueue.getSortOrigin();
 
-        /* Text layers defer only inside a recorded group (labels): the group preserves the
-         * text-over-background order, and text keeps its depth writes there. */
+        /* Text layers defer only inside a recorded group (labels), where the group preserves
+         * the text-over-background order. */
         boolean textLayer = FormTranslucentQueue.isGroupOpen() && layer.getVertexFormat() == VertexFormats.POSITION_COLOR_TEXTURE_LIGHT;
 
         if (origin == null || !FormTranslucentQueue.isActive() || !(textLayer || isDeferrableTranslucent(layer)))
@@ -128,7 +128,7 @@ public class CustomVertexConsumerProvider extends VertexConsumerProvider.Immedia
             buffer.upload(built);
             VertexBuffer.unbind();
 
-            FormTranslucentQueue.add(new FormTranslucentQueue.RenderLayerCommand(layer, buffer, new Matrix4f(RenderSystem.getModelViewMatrix()), new Vector3f(origin), textLayer));
+            FormTranslucentQueue.add(new FormTranslucentQueue.RenderLayerCommand(layer, buffer, new Matrix4f(RenderSystem.getModelViewMatrix()), new Vector3f(origin)));
         }
 
         if (layer.equals(this.currentLayer))

@@ -31,8 +31,11 @@ import java.util.function.Supplier;
  * draws whose texture (or color) has semi-transparency run twice: an immediate opaque pass
  * (shader keeps only opaque texels, which write depth), and a command enqueued here. At the
  * end of the frame — after every form has drawn — {@link #flush()} replays the commands
- * sorted far-to-near with depth writes off, so translucent pixels blend over everything
- * without ever hiding it.</p>
+ * sorted far-to-near, so translucent pixels blend over everything without ever hiding it.
+ * It's the sort, not the depth mask, that keeps forms behind them visible: solid geometry
+ * keeps writing depth in the replay, so a model's own semi-transparent texels still occlude
+ * the ones behind them. Only flat forms (billboards, framebuffer screens, label parts) drop
+ * the depth write — they have no self-occlusion to preserve.</p>
  *
  * <p>Commands replay finished draw calls with matrices captured at enqueue time — they never
  * re-run animation, IK or physics.</p>
@@ -109,9 +112,9 @@ public class FormTranslucentQueue
      * Whether a draw splits into an immediate opaque pass (writes depth) + a deferred translucent
      * pass. Only when translucency is <em>intrinsic to the texture</em> and the colour is not
      * faded: the solid texels draw now and write depth, the see-through ones defer. A uniform
-     * colour fade (alpha &lt; 1) instead takes {@link #needsWholeDefer}, because splitting would
-     * push every texel of an otherwise-opaque model into the depth-less translucent pass — the
-     * model would stop writing depth entirely and lose its self-occlusion. False outside an active
+     * colour fade (alpha &lt; 1) instead takes {@link #needsWholeDefer}, because it drops every
+     * texel below the opaque threshold — the split's immediate pass would draw nothing at all,
+     * leaving a pointless empty draw call per group. False outside an active
      * queue scope (UI previews, first-person arm), during picking (the stencil needs every pixel),
      * and on shaders without the PassMode uniform (vanilla programs — the Iris path).
      */
@@ -216,9 +219,9 @@ public class FormTranslucentQueue
 
         for (DrawCommand command : commands)
         {
-            /* Split-pass commands hold only semi-transparent texels and never write depth;
-             * whole-draw commands (the Iris path) carry the entire mesh, so they keep depth
-             * writes for correct self-occlusion — the sort already ordered them between models. */
+            /* Solid geometry keeps depth writes for correct self-occlusion — the sort already
+             * ordered the commands between models. Flat single-quad forms don't write, so they
+             * can't occlude each other or anything drawn after this pass. */
             RenderSystem.depthMask(command.depthWrite);
 
             if (command.cull)
@@ -293,9 +296,10 @@ public class FormTranslucentQueue
     }
 
     /**
-     * Replays a cubic model group's static VAO. The two-pass form draws the BBS model shader's
-     * translucent pass without depth writes; the whole-draw form (a uniform colour fade) replays
-     * the entire draw and keeps depth writes.
+     * Replays a cubic model group's static VAO — the two-pass form draws the BBS model shader's
+     * translucent pass, the whole-draw form (a uniform colour fade) the entire draw. Both keep
+     * depth writes: model geometry is solid, so its semi-transparent texels must occlude the
+     * ones behind them within the same model.
      */
     public static class ModelVAOCommand extends DrawCommand
     {
@@ -312,7 +316,7 @@ public class FormTranslucentQueue
         /** The two-pass translucent replay (BBS model shader). */
         public ModelVAOCommand(IModelVAO vao, Texture texture, Matrix4f modelView, Matrix3f normalMat, float r, float g, float b, float a, int light, int overlay, boolean cull)
         {
-            this(vao, BBSShaders::getModel, PASS_TRANSLUCENT, false, texture, modelView, normalMat, r, g, b, a, light, overlay, cull);
+            this(vao, BBSShaders::getModel, PASS_TRANSLUCENT, true, texture, modelView, normalMat, r, g, b, a, light, overlay, cull);
         }
 
         public ModelVAOCommand(IModelVAO vao, Supplier<ShaderProgram> shader, int passMode, boolean depthWrite, Texture texture, Matrix4f modelView, Matrix3f normalMat, float r, float g, float b, float a, int light, int overlay, boolean cull)
@@ -371,7 +375,7 @@ public class FormTranslucentQueue
         /** The two-pass translucent replay (BBS model shader). */
         public BOBJCommand(BOBJModelVAO vao, Matrix4f[] armatureSnapshot, int uploadCount, Texture texture, Matrix4f modelView, Matrix3f normalMat, float r, float g, float b, float a, int light, int overlay, boolean cull)
         {
-            this(vao, BBSShaders::getModel, PASS_TRANSLUCENT, false, armatureSnapshot, uploadCount, texture, modelView, normalMat, r, g, b, a, light, overlay, cull);
+            this(vao, BBSShaders::getModel, PASS_TRANSLUCENT, true, armatureSnapshot, uploadCount, texture, modelView, normalMat, r, g, b, a, light, overlay, cull);
         }
 
         public BOBJCommand(BOBJModelVAO vao, Supplier<ShaderProgram> shader, int passMode, boolean depthWrite, Matrix4f[] armatureSnapshot, int uploadCount, Texture texture, Matrix4f modelView, Matrix3f normalMat, float r, float g, float b, float a, int light, int overlay, boolean cull)
@@ -460,9 +464,14 @@ public class FormTranslucentQueue
         private final VertexBuffer buffer;
         private final Matrix4f modelView;
 
-        public RenderLayerCommand(net.minecraft.client.render.RenderLayer layer, VertexBuffer buffer, Matrix4f modelView, Vector3f cameraSpaceOrigin, boolean depthWrite)
+        public RenderLayerCommand(net.minecraft.client.render.RenderLayer layer, VertexBuffer buffer, Matrix4f modelView, Vector3f cameraSpaceOrigin)
         {
-            super(cameraSpaceOrigin, true, depthWrite);
+            /* Depth writes stay on, matching what these vanilla entity layers do when they draw
+             * themselves (ALL_MASK): a block or an item model is solid geometry — an item's
+             * extruded sprite is a stack of layers — so its faces must occlude each other, or
+             * the back ones pile over the front. Forms behind it stay visible through the
+             * far-to-near sort, not through a disabled depth mask. */
+            super(cameraSpaceOrigin, true, true);
 
             this.layer = layer;
             this.buffer = buffer;
@@ -506,7 +515,11 @@ public class FormTranslucentQueue
         private final Runnable preDraw;
         private final Runnable postDraw;
 
-        /** The split translucent replay: only the semi-transparent texels, no depth write. */
+        /**
+         * The flat-form replay: a single quad (billboard, framebuffer screen, a label's parts)
+         * deferred without depth writes, so it never occludes what draws behind it. Solid
+         * geometry must not use this — see the explicit constructor below.
+         */
         public VertexBufferCommand(VertexBuffer buffer, Supplier<ShaderProgram> shader, Texture texture, Matrix4f modelView, Matrix3f normalMat, Vector3f cameraSpaceOrigin, boolean cull, Runnable preDraw, Runnable postDraw)
         {
             this(buffer, shader, PASS_TRANSLUCENT, false, texture, modelView, normalMat, cameraSpaceOrigin, cull, preDraw, postDraw);
