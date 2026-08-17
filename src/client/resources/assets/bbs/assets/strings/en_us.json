@@ -871,6 +871,7 @@
 	"bbs.ui.forms.editors.model.ik": "IK Chains",
 	"bbs.ui.forms.editors.model.ik.debug": "Show debug overlay",
 	"bbs.ui.forms.editors.model.ik.bones": "Bones",
+	"bbs.ui.forms.editors.model.ik.bones_tooltip": "Dots on the right: yellow — a chain lives on this bone (small: the chain drives it), cyan — somebody's target, magenta — a pole, orange — the bone has joint locks or limits. Gray means the chain is off.",
 	"bbs.ui.forms.editors.model.ik.settings": "Chain",
 	"bbs.ui.forms.editors.model.ik.enabled": "Enable IK",
 	"bbs.ui.forms.editors.model.ik.target": "Target — the controller bone the chain reaches for",

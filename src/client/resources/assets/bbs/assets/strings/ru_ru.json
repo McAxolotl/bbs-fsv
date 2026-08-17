@@ -867,6 +867,7 @@
 	"bbs.ui.forms.editors.model.ik": "IK-цепочки",
 	"bbs.ui.forms.editors.model.ik.debug": "Показать отладку",
 	"bbs.ui.forms.editors.model.ik.bones": "Кости",
+	"bbs.ui.forms.editors.model.ik.bones_tooltip": "Точки справа: жёлтая — на кости стоит цепь (маленькая: цепь её ведёт), голубая — чья-то цель, розовая — полюс, оранжевая — на кости замки или лимиты сустава. Серая означает, что цепь выключена.",
 	"bbs.ui.forms.editors.model.ik.settings": "Цепочка",
 	"bbs.ui.forms.editors.model.ik.enabled": "Включить IK",
 	"bbs.ui.forms.editors.model.ik.target": "Цель — кость-контроллер, к которой тянется цепочка",
