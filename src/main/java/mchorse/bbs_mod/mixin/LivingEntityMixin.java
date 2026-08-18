@@ -2,10 +2,16 @@ package mchorse.bbs_mod.mixin;
 
 import mchorse.bbs_mod.BBSMod;
 import mchorse.bbs_mod.actions.types.AttackActionClip;
+import mchorse.bbs_mod.actions.types.item.ReleaseUseItemActionClip;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.RangedWeaponItem;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.util.Hand;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -26,6 +32,60 @@ public class LivingEntityMixin
                 AttackActionClip clip = new AttackActionClip();
 
                 clip.damage.set(amount);
+
+                return clip;
+            });
+        }
+    }
+
+    /**
+     * The exact vanilla moment a drawn bow fires or a trident launches:
+     * stopUsingItem() calls onStoppedUsing() with the remaining use ticks, so
+     * this is where the release is recorded - with the very charge the take
+     * had. The getClass() check keeps the playback fake player out.
+     */
+    @Inject(method = "stopUsingItem", at = @At("HEAD"))
+    public void onStopUsingItem(CallbackInfo info)
+    {
+        if ((Object) this instanceof ServerPlayerEntity player && player.getClass() == ServerPlayerEntity.class)
+        {
+            ItemStack active = player.getActiveItem();
+
+            if (active.isEmpty())
+            {
+                return;
+            }
+
+            boolean mainHand = player.getActiveHand() == Hand.MAIN_HAND;
+            int charge = active.getMaxUseTime(player) - player.getItemUseTimeLeft();
+            ItemStack stack = active.copy();
+            ItemStack recordedProjectile = player.getProjectileType(active).copy();
+
+            /* Creative players shoot without ammo and vanilla substitutes a
+             * plain arrow, but the fake player has no creative mode - so the
+             * substitute is baked into the clip instead */
+            if (recordedProjectile.isEmpty() && stack.getItem() instanceof RangedWeaponItem && player.getAbilities().creativeMode)
+            {
+                recordedProjectile = new ItemStack(Items.ARROW);
+            }
+
+            ItemStack projectile = recordedProjectile;
+
+            /* TridentItem.onStoppedUsing's own fork, evaluated here because it
+             * asks the WORLD, not the item: a riptide trident released in water
+             * or rain launches its owner and is never thrown. The playback fake
+             * player always stands dry, so the answer has to be recorded. */
+            boolean riptide = charge >= 10 && EnchantmentHelper.getTridentSpinAttackStrength(active, player) > 0F && player.isTouchingWaterOrRain();
+
+            BBSMod.getActions().addAction(player, () ->
+            {
+                ReleaseUseItemActionClip clip = new ReleaseUseItemActionClip();
+
+                clip.itemStack.set(stack);
+                clip.hand.set(mainHand);
+                clip.charge.set(charge);
+                clip.projectile.set(projectile);
+                clip.riptide.set(riptide);
 
                 return clip;
             });

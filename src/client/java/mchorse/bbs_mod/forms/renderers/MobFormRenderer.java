@@ -270,10 +270,17 @@ public class MobFormRenderer extends FormRenderer<MobForm> implements ITickable
 
         if (this.entity != null)
         {
+            /* The vanilla entity pipeline below leaves its own value in the
+             * global model-view matrix, so the non-UI cleanup used to wipe it
+             * to identity. That identity leaked out of any render that is NOT
+             * the film viewport: a placed model block with a mob form nuked
+             * the matrix every world frame and the whole UI over it fell
+             * apart. Snapshot and restore instead - the film viewport enters
+             * here with identity anyway, so its old contract holds. */
+            Matrix4f modelView = new Matrix4f(RenderSystem.getModelViewMatrix());
             CustomVertexConsumerProvider consumers = FormUtilsClient.getProvider();
             int light = context.light;
             BooleanHolder first = new BooleanHolder();
-            Matrix4f cached = new Matrix4f(RenderSystem.getModelViewMatrix());
 
             if (context.isPicking())
             {
@@ -361,14 +368,22 @@ public class MobFormRenderer extends FormRenderer<MobForm> implements ITickable
                 context.world.pop();
             }
 
-            /* Restore the shared model-view matrix captured at entry instead of zeroing it.
-             * The old identity() leaked into the 2D UI batch when a MobForm is rendered as a
-             * body part inside a list/preview (through this 3D path) — the GUI transform was
-             * dropped, so every UI element drawn afterwards landed off-screen ("half the UI
-             * disappears" when a MobForm is nested under a ModelForm). Restoring is correct for
-             * the 3D viewport too. */
-            RenderSystem.enableDepthTest();
-            RenderSystem.getModelViewMatrix().set(cached);
+            /* When this MobForm is a body part rendered inside a 2D list/preview (context.ui),
+             * it reaches here through the 3D path. The viewport cleanup below would leak into
+             * the ongoing 2D batch: resetting the shared model-view matrix to identity drops
+             * the GUI transform, so every UI element drawn afterwards lands off-screen — the
+             * "half the UI disappears" bug when a MobForm is nested under a ModelForm. In the
+             * UI, match the known-good top-level renderInUI path (just fix the depth func,
+             * leave the model-view matrix untouched). The 3D viewport keeps its cleanup. */
+            if (context.ui)
+            {
+                RenderSystem.depthFunc(GL11.GL_ALWAYS);
+            }
+            else
+            {
+                RenderSystem.enableDepthTest();
+                RenderSystem.getModelViewMatrix().set(modelView);
+            }
         }
     }
 

@@ -15,6 +15,8 @@
         "WorldRendererMixin",
         "LanguageManagerMixin",
         "LivingEntityMixin",
+        "LivingEntityFilmUseMixin",
+        "ClientPlayerEntityFilmUseMixin",
         "LivingEntityUpdateMixin",
         "LivingEntityRendererMixin",
         "iris.SystemTimeUniformsTimerMixin",

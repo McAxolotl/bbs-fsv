@@ -3,6 +3,7 @@ package mchorse.bbs_mod.mixin;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import mchorse.bbs_mod.BBSMod;
+import mchorse.bbs_mod.actions.ActionManager;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -36,6 +37,14 @@ public class WorldChunkMixin
 
         if (chunk.getWorld() instanceof ServerWorld world)
         {
+            /* Asked before the block entity is looked up, not after: this runs on every block
+             * change on the server, and looking it up and serializing it to NBT was being paid
+             * for even with nothing being filmed and the feature turned off. */
+            if (!isTracking())
+            {
+                return;
+            }
+
             BlockEntity blockEntity = chunk.getBlockEntity(pos);
 
             if (blockEntity != null)
@@ -51,9 +60,16 @@ public class WorldChunkMixin
         BlockState previous = info.getReturnValue();
         WorldChunk chunk = (WorldChunk) (Object) this;
 
-        if (previous != null && chunk.getWorld() instanceof ServerWorld)
+        if (previous != null && isTracking() && chunk.getWorld() instanceof ServerWorld)
         {
             BBSMod.getActions().changedBlock(pos, previous, replaced.get());
         }
+    }
+
+    private static boolean isTracking()
+    {
+        ActionManager actions = BBSMod.getActions();
+
+        return actions != null && actions.isTracking();
     }
 }

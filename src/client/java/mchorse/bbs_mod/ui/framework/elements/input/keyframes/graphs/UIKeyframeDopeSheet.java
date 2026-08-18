@@ -302,6 +302,23 @@ public class UIKeyframeDopeSheet implements IUIKeyframeGraph
         return expandedIds;
     }
 
+    /**
+     * Every pose track shown here, folded or not - so a caller saving the folded state knows which
+     * tracks this sheet can answer for. A sheet the current category or filter left out says nothing
+     * about that track, and an empty answer from it must not read as "folded".
+     */
+    public Set<String> getPoseTabIds()
+    {
+        Set<String> ids = new HashSet<>();
+
+        for (UIKeyframeSheet sheet : this.poseTabParents)
+        {
+            ids.add(sheet.id);
+        }
+
+        return ids;
+    }
+
     public void removeAllSheets()
     {
         this.elements.clear();

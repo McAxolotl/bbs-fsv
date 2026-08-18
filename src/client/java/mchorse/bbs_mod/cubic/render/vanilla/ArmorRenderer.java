@@ -23,24 +23,34 @@ import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ArmorMaterial;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.item.trim.ArmorTrim;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Vec3d;
 
 import java.util.Map;
 
 public class ArmorRenderer
 {
     private static final Map<String, Identifier> ARMOR_TEXTURE_CACHE = Maps.newHashMap();
+    private static final Identifier ELYTRA_TEXTURE = Identifier.ofVanilla("textures/entity/elytra.png");
+
     private final BipedEntityModel innerModel;
     private final BipedEntityModel outerModel;
+    private final ModelPart elytra;
+    private final ModelPart elytraLeftWing;
+    private final ModelPart elytraRightWing;
     private final SpriteAtlasTexture armorTrimsAtlas;
 
-    public ArmorRenderer(BipedEntityModel innerModel, BipedEntityModel outerModel, BakedModelManager bakery)
+    public ArmorRenderer(BipedEntityModel innerModel, BipedEntityModel outerModel, ModelPart elytra, BakedModelManager bakery)
     {
         this.innerModel = innerModel;
         this.outerModel = outerModel;
+        this.elytra = elytra;
+        this.elytraLeftWing = elytra.getChild("left_wing");
+        this.elytraRightWing = elytra.getChild("right_wing");
         this.armorTrimsAtlas = bakery.getAtlas(TexturedRenderLayers.ARMOR_TRIMS_ATLAS_TEXTURE);
     }
 
@@ -48,6 +58,13 @@ public class ArmorRenderer
     {
         ItemStack itemStack = entity.getEquipmentStack(armorSlot);
         Item item = itemStack.getItem();
+
+        if (type == ArmorType.CHEST && itemStack.isOf(Items.ELYTRA))
+        {
+            this.renderElytra(matrices, vertexConsumers, entity, itemStack, light);
+
+            return;
+        }
 
         if (item instanceof ArmorItem armorItem)
         {
@@ -93,6 +110,61 @@ public class ArmorRenderer
                 }
             }
         }
+    }
+
+    /* Vanilla elytra, verified against 1.20.4 bytecode: ElytraFeatureRenderer.render
+     * (translate 0,0,0.125; armor cutout layer; glint) + ElytraEntityModel.setAngles
+     * (non-player branch: standing / sneaking / fall flying wing angles) */
+    private void renderElytra(MatrixStack matrices, VertexConsumerProvider vertexConsumers, IEntity entity, ItemStack itemStack, int light)
+    {
+        float pitch = 0.2617994F;
+        float roll = -0.2617994F;
+        float pivotY = 0F;
+        float yaw = 0F;
+
+        if (entity.isFallFlying())
+        {
+            float spread = 1F;
+            Vec3d velocity = entity.getVelocity();
+
+            if (velocity.y < 0D)
+            {
+                spread = 1F - (float) Math.pow(-velocity.normalize().y, 1.5D);
+            }
+
+            pitch = spread * 0.34906584F + (1F - spread) * pitch;
+            roll = spread * -1.5707964F + (1F - spread) * roll;
+        }
+        else if (entity.isSneaking())
+        {
+            pitch = 0.6981317F;
+            roll = -0.7853982F;
+            pivotY = 3F;
+            yaw = 0.08726646F;
+        }
+
+        this.elytraLeftWing.pivotY = pivotY;
+        this.elytraLeftWing.pitch = pitch;
+        this.elytraLeftWing.yaw = yaw;
+        this.elytraLeftWing.roll = roll;
+        this.elytraRightWing.pivotY = pivotY;
+        this.elytraRightWing.pitch = pitch;
+        this.elytraRightWing.yaw = -yaw;
+        this.elytraRightWing.roll = -roll;
+
+        matrices.push();
+        matrices.translate(0F, 0F, 0.125F);
+
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getArmorCutoutNoCull(ELYTRA_TEXTURE));
+
+        this.elytra.render(matrices, vertexConsumer, light, OverlayTexture.DEFAULT_UV);
+
+        if (itemStack.hasGlint())
+        {
+            this.renderGlint(this.elytra, matrices, vertexConsumers, light);
+        }
+
+        matrices.pop();
     }
 
     private ModelPart getPart(BipedEntityModel bipedModel, ArmorType type)

@@ -36,7 +36,6 @@ import mchorse.bbs_mod.ui.utils.icons.Icons;
 import mchorse.bbs_mod.utils.MatrixStackUtils;
 import mchorse.bbs_mod.ui.framework.elements.input.drag.TransformSpace;
 import mchorse.bbs_mod.utils.Pair;
-import mchorse.bbs_mod.utils.StringUtils;
 import mchorse.bbs_mod.utils.colors.Colors;
 import mchorse.bbs_mod.utils.joml.Matrices;
 import mchorse.bbs_mod.utils.keyframes.KeyframeChannel;
@@ -173,7 +172,7 @@ public class UIAnimationStateEditor extends UIElement
 
         for (UIKeyframeSheet sheet : sheets)
         {
-            this.keys.add(sheet.isBoneTrack ? sheet.title.get() : StringUtils.fileName(sheet.id));
+            this.keys.add(UIReplaysEditor.getSheetFilterKey(sheet));
         }
 
         sheets.removeIf((v) ->

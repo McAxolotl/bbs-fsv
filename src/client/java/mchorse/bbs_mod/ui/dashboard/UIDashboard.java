@@ -96,10 +96,7 @@ public class UIDashboard extends UIBaseMenu
 
         this.settingsPanel = new UISettingsOverlayPanel();
 
-        this.settings = new UIIcon(Icons.SETTINGS, (b) ->
-        {
-            UIOverlay.addOverlay(this.context, this.settingsPanel, 430, 380);
-        });
+        this.settings = new UIIcon(Icons.SETTINGS, (b) -> this.openSettings());
         this.settings.tooltip(UIKeys.CONFIG_TITLE, Direction.TOP);
         this.selectors = new UIIcon(Icons.PROPERTIES, (b) ->
         {
@@ -138,6 +135,15 @@ public class UIDashboard extends UIBaseMenu
             BBSSettings.ikDebug.enabled.set(enabled);
             BBSSettings.physicsDebug.enabled.set(enabled);
         }).category(category);
+        this.overlay.keys().register(Keys.OPEN_SETTINGS, () ->
+        {
+            if (UIOverlay.has(this.context))
+            {
+                return;
+            }
+
+            this.openSettings();
+        }).category(category);
         this.overlay.keys().register(Keys.OPEN_UTILITY_PANEL, () ->
         {
             if (UIOverlay.has(this.context))
@@ -160,6 +166,11 @@ public class UIDashboard extends UIBaseMenu
                 UIKeys.DASHBOARD_OPTIFINE_EW_DESCRIPTION
             ));
         }
+    }
+
+    public void openSettings()
+    {
+        UIOverlay.addOverlay(this.context, this.settingsPanel, 430, 380);
     }
 
     public void copyCurrentEntityCamera()
