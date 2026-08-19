@@ -1,5 +1,6 @@
 package mchorse.bbs_mod.graphics;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import mchorse.bbs_mod.graphics.texture.Texture;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
@@ -96,7 +97,15 @@ public class Framebuffer
     {
         Texture texture = this.getMainTexture();
 
-        GL11.glViewport(0, 0, texture.width, texture.height);
+        /* Through RenderSystem, NEVER raw GL11.glViewport. Both Minecraft and
+         * Sodium keep their own record of the viewport, and Sodium 0.8+ skips a
+         * glViewport call whose arguments match its record
+         * (GlStateManagerMixin#skipRedundantViewport, @WrapWithCondition on
+         * GlStateManager._viewport). A raw call sets the GPU without updating
+         * either record, so the next legitimate restore back to the previous
+         * viewport looks redundant to Sodium and is swallowed — leaving the whole
+         * UI drawn into this framebuffer's viewport. */
+        RenderSystem.viewport(0, 0, texture.width, texture.height);
         this.bind();
     }
 

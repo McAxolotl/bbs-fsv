@@ -7,6 +7,7 @@ import mchorse.bbs_mod.utils.OS;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.sound.SoundEvents;
+import org.lwjgl.opengl.GL30;
 
 import java.io.File;
 import java.io.IOException;
@@ -112,6 +113,39 @@ public class UIUtils
         RenderSystem.viewport(vx, vy, vw, vh);
 
         return new int[] {vx, vy, vw, vh};
+    }
+
+    /**
+     * Read the viewport that is set right now.
+     *
+     * <p>Restoring a viewport by <em>deriving</em> it is a bug: neither the window
+     * size nor {@link net.minecraft.client.gl.Framebuffer#beginWrite(boolean)
+     * beginWrite(true)} tells the truth while a film renders. Both then report the
+     * video framebuffer's size (video size x framebuffer scale) instead of the
+     * screen's, and everything the UI draws afterwards lands in a viewport bigger
+     * than the window. Save with this around any pass that binds another
+     * framebuffer, and put it back with {@link #restoreViewport(int[])}.
+     */
+    public static int[] currentViewport()
+    {
+        int[] viewport = new int[4];
+
+        GL30.glGetIntegerv(GL30.GL_VIEWPORT, viewport);
+
+        return viewport;
+    }
+
+    /**
+     * Put back a viewport captured by {@link #currentViewport()}.
+     */
+    public static void restoreViewport(int[] viewport)
+    {
+        if (viewport == null)
+        {
+            return;
+        }
+
+        RenderSystem.viewport(viewport[0], viewport[1], viewport[2], viewport[3]);
     }
 
     public static void playClick()

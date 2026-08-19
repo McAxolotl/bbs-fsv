@@ -13,7 +13,6 @@ import mchorse.bbs_mod.ui.utils.UIUtils;
 import mchorse.bbs_mod.utils.Factor;
 import mchorse.bbs_mod.utils.MathUtils;
 import mchorse.bbs_mod.utils.MatrixStackUtils;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.DiffuseLighting;
@@ -247,6 +246,9 @@ public abstract class UIModelRenderer extends UIElement
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
 
         this.setupPosition();
+
+        int[] previousViewport = UIUtils.currentViewport();
+
         this.setupViewport(context);
 
         MatrixStack stack = context.render.batcher.getContext().getMatrices();
@@ -284,9 +286,7 @@ public abstract class UIModelRenderer extends UIElement
         stack.pop();
 
         /* Return back to orthographic projection */
-        MinecraftClient mc = MinecraftClient.getInstance();
-
-        RenderSystem.viewport(0, 0, mc.getWindow().getFramebufferWidth(), mc.getWindow().getFramebufferHeight());
+        UIUtils.restoreViewport(previousViewport);
         MatrixStackUtils.restoreMatrices();
 
         RenderSystem.depthFunc(GL11.GL_ALWAYS);

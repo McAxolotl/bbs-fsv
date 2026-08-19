@@ -428,6 +428,7 @@ public class Gizmo
 
         this.sphereHighlight.setup(Link.bbs("gizmo_sphere_highlight"));
 
+        int[] previousViewport = UIUtils.currentViewport();
         int w = mc.getWindow().getWidth();
         int h = mc.getWindow().getHeight();
         Texture texture = this.sphereHighlight.getFramebuffer().getMainTexture();
@@ -448,7 +449,12 @@ public class Gizmo
         RenderSystem.enableDepthTest();
 
         this.sphereHighlight.unbind();
-        mc.getFramebuffer().beginWrite(true);
+
+        /* beginWrite(false) + an explicitly saved viewport: the "main" framebuffer
+         * is the video one while a film renders, so letting it set the viewport
+         * would resize the UI's. */
+        mc.getFramebuffer().beginWrite(false);
+        UIUtils.restoreViewport(previousViewport);
 
         ShaderProgram previewProgram = BBSShaders.getPickerPreviewProgram();
         GlUniform target = previewProgram.getUniform("Target");
@@ -663,8 +669,6 @@ public class Gizmo
             return;
         }
 
-        MinecraftClient mc = MinecraftClient.getInstance();
-
         this.setViewportScale(context.menu.height / (float) area.h);
 
         context.batcher.flush();
@@ -675,6 +679,8 @@ public class Gizmo
         /* Map the UI area to a framebuffer-pixel viewport, exactly as the form
          * editor's model pass does, so the gizmo renders into the preview and is
          * clipped to it by the view frustum. */
+        int[] previousViewport = UIUtils.currentViewport();
+
         UIUtils.viewportArea(area);
 
         MatrixStack stack = new MatrixStack();
@@ -684,7 +690,7 @@ public class Gizmo
         this.drawGizmo(stack);
         RenderSystem.enableDepthTest();
 
-        RenderSystem.viewport(0, 0, mc.getWindow().getFramebufferWidth(), mc.getWindow().getFramebufferHeight());
+        UIUtils.restoreViewport(previousViewport);
         MatrixStackUtils.restoreMatrices();
 
         /* Leave the depth state the UI expects after a 3D interlude (always-pass),
@@ -1660,8 +1666,6 @@ public class Gizmo
             return;
         }
 
-        MinecraftClient mc = MinecraftClient.getInstance();
-
         this.setViewportScale(context.menu.height / (float) area.h);
 
         MatrixStackUtils.cacheMatrices();
@@ -1671,6 +1675,8 @@ public class Gizmo
          * renderInterface does, so the stencil matches the drawn visual pixel for
          * pixel. The pick framebuffer is sized to the window, so the same mapping
          * applies. */
+        int[] previousViewport = UIUtils.currentViewport();
+
         UIUtils.viewportArea(area);
 
         MatrixStack stack = new MatrixStack();
@@ -1678,7 +1684,7 @@ public class Gizmo
 
         this.drawStencilAxes(stack, map);
 
-        RenderSystem.viewport(0, 0, mc.getWindow().getFramebufferWidth(), mc.getWindow().getFramebufferHeight());
+        UIUtils.restoreViewport(previousViewport);
         MatrixStackUtils.restoreMatrices();
     }
 

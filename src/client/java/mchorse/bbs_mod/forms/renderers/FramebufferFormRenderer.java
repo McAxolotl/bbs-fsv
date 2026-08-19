@@ -187,7 +187,11 @@ public class FramebufferFormRenderer extends FormRenderer<FramebufferForm>
 
         GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, prevDraw);
         GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, prevRead);
-        GL30.glViewport(0, 0, width, height);
+
+        /* Through RenderSystem, not raw GL30.glViewport — see Framebuffer#apply:
+         * a raw call leaves Minecraft's and Sodium's viewport records stale, and
+         * Sodium 0.8+ then swallows a later restore as redundant. */
+        RenderSystem.viewport(0, 0, width, height);
 
         RenderSystem.setShaderLights(light0, light1);
         RenderSystem.getModelViewStack().popMatrix();

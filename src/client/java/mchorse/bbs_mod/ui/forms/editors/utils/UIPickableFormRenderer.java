@@ -23,6 +23,7 @@ import mchorse.bbs_mod.ui.utils.GizmoInteraction;
 import mchorse.bbs_mod.ui.utils.GizmoViewport;
 import mchorse.bbs_mod.ui.utils.Area;
 import mchorse.bbs_mod.ui.utils.StencilFormFramebuffer;
+import mchorse.bbs_mod.ui.utils.UIUtils;
 import mchorse.bbs_mod.utils.MatrixStackUtils;
 import mchorse.bbs_mod.utils.Pair;
 import mchorse.bbs_mod.utils.colors.Colors;
@@ -192,6 +193,9 @@ public class UIPickableFormRenderer extends UIFormRenderer implements GizmoViewp
         {
             GlStateManager._disableScissorTest();
 
+            /* The pick framebuffer sets its own viewport; remember the UI's. */
+            int[] previousViewport = UIUtils.currentViewport();
+
             this.stencilMap.setup();
             this.stencil.apply();
 
@@ -224,7 +228,10 @@ public class UIPickableFormRenderer extends UIFormRenderer implements GizmoViewp
             this.stencil.pickGUI(context, this.area, BBSSettings.gizmoHoverTolerance.get(), Gizmo.STENCIL_MAX);
             this.stencil.unbind(this.stencilMap);
 
-            MinecraftClient.getInstance().getFramebuffer().beginWrite(true);
+            /* beginWrite(false): while a film renders the "main" framebuffer is the
+             * video one, and letting it set the viewport would resize the UI's. */
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+            UIUtils.restoreViewport(previousViewport);
 
             GlStateManager._enableScissorTest();
         }

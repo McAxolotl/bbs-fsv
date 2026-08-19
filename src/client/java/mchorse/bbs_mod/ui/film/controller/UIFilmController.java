@@ -1652,6 +1652,10 @@ public class UIFilmController extends UIElement implements GizmoViewport
 
         this.ensureStencilFramebuffer();
 
+        /* The pick pass binds its own framebuffer, which sets its own viewport.
+         * Remember the UI's one so it can be put back verbatim afterwards. */
+        int[] previousViewport = UIUtils.currentViewport();
+
         /* Match the visual gizmo's on-screen size compensation (see
          * Gizmo#setViewportScale) so the pick handles line up with what is drawn. */
         Gizmo.INSTANCE.setViewportScale(context.menu.height / (float) viewport.h);
@@ -1726,7 +1730,11 @@ public class UIFilmController extends UIElement implements GizmoViewport
         this.stencil.pick(x, y, radius, Gizmo.STENCIL_MAX);
         this.stencil.unbind(this.stencilMap);
 
-        MinecraftClient.getInstance().getFramebuffer().beginWrite(true);
+        /* Bind the main framebuffer WITHOUT letting it set the viewport: during a
+         * film render the "main" framebuffer is the video one, so beginWrite(true)
+         * would blow the UI's viewport up to the video size. */
+        MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        UIUtils.restoreViewport(previousViewport);
     }
 
     private void ensureStencilFramebuffer()

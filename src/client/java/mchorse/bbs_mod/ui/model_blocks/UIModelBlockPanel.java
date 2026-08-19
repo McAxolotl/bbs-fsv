@@ -439,6 +439,7 @@ public class UIModelBlockPanel extends UIDashboardPanel implements IFlightSuppor
 
         this.gizmoStencil.setup(Link.bbs("stencil_model_block"));
 
+        int[] previousViewport = UIUtils.currentViewport();
         int w = mc.getWindow().getWidth();
         int h = mc.getWindow().getHeight();
         Texture texture = this.gizmoStencil.getFramebuffer().getMainTexture();
@@ -460,7 +461,10 @@ public class UIModelBlockPanel extends UIDashboardPanel implements IFlightSuppor
         this.gizmoStencil.pick((int) mc.mouse.getX(), (int) (h - mc.mouse.getY()), Math.round(BBSSettings.gizmoHoverTolerance.get() * BBSModClient.getGUIScale()), Gizmo.STENCIL_MAX);
         this.gizmoStencil.unbind(this.gizmoStencilMap);
 
-        mc.getFramebuffer().beginWrite(true);
+        /* beginWrite(false): while a film renders the "main" framebuffer is the
+         * video one, and letting it set the viewport would resize the UI's. */
+        mc.getFramebuffer().beginWrite(false);
+        UIUtils.restoreViewport(previousViewport);
     }
 
     private void addCameraController(UIFormPalette palette)
