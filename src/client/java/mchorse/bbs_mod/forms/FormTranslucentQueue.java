@@ -214,11 +214,11 @@ public class FormTranslucentQueue
 
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL11.GL_LEQUAL);
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
 
         for (DrawCommand command : commands)
         {
+            resetBlend();
+
             /* Solid geometry keeps depth writes for correct self-occlusion — the sort already
              * ordered the commands between models. Flat single-quad forms don't write, so they
              * can't occlude each other or anything drawn after this pass. */
@@ -253,6 +253,19 @@ public class FormTranslucentQueue
 
         gameRenderer.getLightmapTextureManager().disable();
         gameRenderer.getOverlayTexture().teardownOverlayColor();
+    }
+
+    /**
+     * Blending is per-command state, not per-pass: a {@link RenderLayerCommand} ends with the
+     * layer's own endDrawing, and every vanilla translucent layer disables blending there. The
+     * command replayed next — a label's background quad right after its text, a billboard after
+     * a block — would then draw with GL_BLEND off and lose its alpha entirely. Each command
+     * (and each child inside a group) starts from the same known state instead.
+     */
+    private static void resetBlend()
+    {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
     }
 
     /** Drop any leftover commands (e.g. a frame whose flush point never ran) and free their resources. */
@@ -439,6 +452,8 @@ public class FormTranslucentQueue
         {
             for (DrawCommand child : this.children)
             {
+                resetBlend();
+
                 child.draw();
             }
         }

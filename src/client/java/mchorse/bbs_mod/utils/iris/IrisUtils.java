@@ -24,9 +24,12 @@ import net.irisshaders.iris.pbr.loader.PBRTextureLoaderRegistry;
 import net.irisshaders.iris.uniforms.custom.cached.CachedUniform;
 import net.irisshaders.iris.uniforms.custom.cached.FloatCachedUniform;
 import net.irisshaders.iris.uniforms.custom.cached.IntCachedUniform;
+import net.irisshaders.iris.vertices.ImmediateState;
+import net.irisshaders.iris.vertices.IrisExtendedBufferBuilder;
 import net.irisshaders.iris.vertices.NormI8;
 import net.irisshaders.iris.vertices.NormalHelper;
 import net.irisshaders.iris.vertices.views.TriView;
+import net.minecraft.client.render.BufferBuilder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -189,6 +192,40 @@ public class IrisUtils
     public static boolean isShadowPass()
     {
         return IrisApi.getInstance().isRenderingShadowPass();
+    }
+
+    /**
+     * Match the vertex layout of an upload to the buffer actually being uploaded.
+     *
+     * <p>Iris picks that layout twice. A buffer's own format is chosen when the render layer
+     * begins: it gains tangents and mid-texture coordinates while the level renders, and stays
+     * plain vanilla anywhere else (a form editor viewport, an item in a GUI). The vertex array's
+     * layout is chosen again inside {@link net.minecraft.client.render.VertexFormat#setupState()},
+     * and there Iris reads a flag instead — a plain entity format is set up with the
+     * <em>extended</em> stride whenever that flag is up. The two agree only because Iris drops the
+     * flag for the duration of the immediate provider's draw, the one place vanilla ever uploads
+     * a buffer of the second kind.</p>
+     *
+     * <p>So anything that ends and uploads such a buffer by itself has to keep the pair honest,
+     * or the vertex array reads 36 byte vertices at the extended stride and the geometry tears
+     * into a fan of stretched triangles. The buffer knows which of the two it is, so ask it
+     * rather than repeating Iris' reasoning about it.</p>
+     */
+    public static boolean beginBufferUpload(BufferBuilder builder)
+    {
+        boolean extended = ImmediateState.renderWithExtendedVertexFormat;
+
+        if (builder instanceof IrisExtendedBufferBuilder buffer && !buffer.iris$extending())
+        {
+            ImmediateState.renderWithExtendedVertexFormat = false;
+        }
+
+        return extended;
+    }
+
+    public static void endBufferUpload(boolean extended)
+    {
+        ImmediateState.renderWithExtendedVertexFormat = extended;
     }
 
     public static float[] calculateTangents(float[] v, float[] n, float[] u)

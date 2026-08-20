@@ -326,7 +326,7 @@ public class UIReplaysEditorUtils
             KeyframeChannel channel = properties.registerChannel(boneKey, KeyframeFactories.POSE_TRANSFORM);
             ValueTransform transform = new ValueTransform(boneKey, new PoseTransform());
 
-            out.add(new UIKeyframeSheet(boneKey, IKey.constant(title), color, false, channel, transform, true).form(modelForm));
+            out.add(new UIKeyframeSheet(boneKey, IKey.constant(title), color, false, channel, transform, true).icon(Icons.LIMB).form(modelForm));
 
             if (depthBySheetId != null)
             {

@@ -175,13 +175,13 @@ public class UIAnimationStateEditor extends UIElement
             this.keys.add(UIReplaysEditor.getSheetFilterKey(sheet));
         }
 
+        sheets.removeIf((v) -> v.id.equals("anchor"));
+
+        /* The state isn't empty by itself - so if the filter empties it, the timeline has to stay (see below). */
+        boolean hadTracks = !sheets.isEmpty();
+
         sheets.removeIf((v) ->
         {
-            if (v.id.equals("anchor"))
-            {
-                return true;
-            }
-
             String filterKey = UIReplaysEditor.getSheetFilterKey(v);
 
             for (String s : BBSSettings.disabledSheets.get())
@@ -218,11 +218,17 @@ public class UIAnimationStateEditor extends UIElement
             lastForm = form;
         }
 
-        if (!sheets.isEmpty())
+        /*
+         * Filtering every track off used to drop the timeline itself, and the track filter lives in its
+         * context menu - so «disable all» locked the user out of the only way back. Keep the (empty)
+         * timeline whenever the state had tracks before the filter ran; the dope sheet says why it's blank.
+         */
+        if (!sheets.isEmpty() || hadTracks)
         {
             this.keyframeEditor = new UIKeyframeEditor((consumer) -> new UIAnimationStateKeyframes(this.editor, consumer)).target(this.editArea);
             this.keyframeEditor.relative(this).h(1F).wTo(this.editArea.area);
             this.keyframeEditor.setUndoId("form_animation_state_keyframe_editor");
+            this.keyframeEditor.view.getDopeSheet().setEmptyState(UIKeys.KEYFRAMES_EMPTY_FILTERED, UIKeys.KEYFRAMES_EMPTY_FILTERED_HINT);
 
             /* Reset */
             if (lastEditor != null)

@@ -1081,6 +1081,8 @@
 	"bbs.ui.keyframes.track_style.name": "Name",
 	"bbs.ui.keyframes.track_style.color": "Color",
 	"bbs.ui.keyframes.track_style.reset": "Reset to default",
+	"bbs.ui.keyframes.empty_filtered": "Every track is hidden by the filter",
+	"bbs.ui.keyframes.empty_filtered-hint": "Right click here → Filter tracks...",
 	"bbs.ui.keyframes.forced_duration": "Forced duration",
 	"bbs.ui.keyframes.keys.category": "Keyframes editor",
 	"bbs.ui.keyframes.keys.scale_time": "Scale time",

@@ -1494,14 +1494,71 @@ public abstract class BaseFilmController
 
     protected void renderEntity(WorldRenderContext context, Replay replay, IEntity entity)
     {
-        if (!replay.actor.get())
+        if (replay.actor.get())
         {
-            FilmControllerContext filmContext = getFilmControllerContext(context, replay, entity);
+            this.renderActorNameTag(context, replay, entity);
 
-            filmContext.transition = getTransition(entity, context.tickCounter().getTickDelta(false));
-
-            renderEntity(filmContext);
+            return;
         }
+
+        FilmControllerContext filmContext = getFilmControllerContext(context, replay, entity);
+
+        filmContext.transition = getTransition(entity, context.tickCounter().getTickDelta(false));
+
+        renderEntity(filmContext);
+    }
+
+    /**
+     * An actor replay is drawn by vanilla as a real entity, so the film controller renders nothing for
+     * it - and the name tag used to leave with the rest of the render. The tag belongs to the replay,
+     * not to the entity, so nothing else puts it up: draw it here, over the body vanilla is actually
+     * drawing (the networked actor, not the keyframed stub, so a moving actor keeps its tag on its
+     * head). No actor entity in the world means no body to label - see FrozenFilmController, which is
+     * deliberately blind to them.
+     */
+    protected void renderActorNameTag(WorldRenderContext context, Replay replay, IEntity entity)
+    {
+        Form form = entity.getForm();
+
+        /* Same conditions as the name tag of a regularly rendered replay: hidden along with the form
+         * (form.visible, animatable via keyframes) and absent in the relative mode. */
+        if (replay.nameTag.get().isEmpty() || replay.relative.get() || form == null || !form.visible.get())
+        {
+            return;
+        }
+
+        Map<String, Integer> actors = this.getActors();
+        Integer entityId = actors == null ? null : actors.get(replay.getId());
+        World world = MinecraftClient.getInstance().world;
+        Entity actor = entityId == null || world == null ? null : world.getEntityById(entityId);
+
+        if (actor == null)
+        {
+            return;
+        }
+
+        float transition = context.tickCounter().getTickDelta(false);
+
+        /* Vanilla's own render position for this entity (see WorldRenderer#render), so the tag sits
+         * exactly above the body instead of above the keyframe the server sent it to. */
+        double x = Lerps.lerp(actor.lastRenderX, actor.getX(), transition);
+        double y = Lerps.lerp(actor.lastRenderY, actor.getY(), transition);
+        double z = Lerps.lerp(actor.lastRenderZ, actor.getZ(), transition);
+
+        BlockPos pos = BlockPos.ofFloored(x, y + 0.5D, z);
+        int sky = world.getLightLevel(LightType.SKY, pos);
+        int torch = world.getLightLevel(LightType.BLOCK, pos);
+        int light = LightmapTextureManager.pack(torch, sky);
+
+        Camera camera = context.camera();
+        MatrixStack stack = context.matrixStack();
+
+        stack.push();
+        stack.translate(x - camera.getPos().x, y - camera.getPos().y, z - camera.getPos().z);
+
+        renderNameTag(entity, Text.literal(StringUtils.processColoredText(replay.nameTag.get())), stack, context.consumers(), light);
+
+        stack.pop();
     }
 
     protected FilmControllerContext getFilmControllerContext(WorldRenderContext context, Replay replay, IEntity entity)

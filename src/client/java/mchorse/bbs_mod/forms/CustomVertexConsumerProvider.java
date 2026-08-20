@@ -1,6 +1,7 @@
 package mchorse.bbs_mod.forms;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import mchorse.bbs_mod.client.BBSRendering;
 import mchorse.bbs_mod.forms.renderers.utils.RecolorVertexConsumer;
 import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.BufferBuilder;
@@ -122,11 +123,21 @@ public class CustomVertexConsumerProvider extends VertexConsumerProvider.Immedia
                 built.sortQuads(this.layerBuffers.getOrDefault(layer, this.allocator), RenderSystem.getVertexSorting());
             }
 
+            /* Uploading the layer's buffer here is what the immediate provider's own draw would
+             * have done — including the vertex layout Iris pins around it. */
+            boolean extended = BBSRendering.beginIrisBufferUpload(builder);
             VertexBuffer buffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
 
-            buffer.bind();
-            buffer.upload(built);
-            VertexBuffer.unbind();
+            try
+            {
+                buffer.bind();
+                buffer.upload(built);
+                VertexBuffer.unbind();
+            }
+            finally
+            {
+                BBSRendering.endIrisBufferUpload(extended);
+            }
 
             FormTranslucentQueue.add(new FormTranslucentQueue.RenderLayerCommand(layer, buffer, new Matrix4f(RenderSystem.getModelViewMatrix()), new Vector3f(origin)));
         }

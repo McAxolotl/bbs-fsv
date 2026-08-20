@@ -425,7 +425,16 @@ public class UIKeyframes extends UIElement
         }
         else
         {
-            this.currentGraph.getSheet(mouseY).selection.after(tick, direction);
+            UIKeyframeSheet sheet = this.currentGraph.getSheet(mouseY);
+
+            /* There is no track under the cursor when it sits below the last one, and asking that
+             * empty strip to select something used to throw. */
+            if (sheet == null)
+            {
+                return;
+            }
+
+            sheet.selection.after(tick, direction);
             this.currentGraph.pickSelected();
         }
     }
