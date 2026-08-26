@@ -74,8 +74,11 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.impl.client.rendering.BlockEntityRendererRegistryImpl;
 import net.fabricmc.loader.api.FabricLoader;
+import mchorse.bbs_mod.data.GameRegistries;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
@@ -366,6 +369,29 @@ public class BBSModClient implements ClientModInitializer
     @Override
     public void onInitializeClient()
     {
+        /* The client's own registries, for the vanilla codecs BBS serializes data with (see
+         * GameRegistries). Taken from the play connection, and NOT interchangeable with an
+         * integrated server's: the client builds its own copy of the dynamic registries, so a
+         * stack held by the client player is owned by this set and refuses to be written down
+         * with the server's. Registered before the common (server) source, so on the client this
+         * is what answers whenever the calling thread doesn't settle it. */
+        GameRegistries.addPreferredSource(new GameRegistries.Source()
+        {
+            @Override
+            public RegistryWrapper.WrapperLookup lookup()
+            {
+                ClientPlayNetworkHandler handler = MinecraftClient.getInstance().getNetworkHandler();
+
+                return handler == null ? null : handler.getRegistryManager();
+            }
+
+            @Override
+            public boolean isOwnThread()
+            {
+                return MinecraftClient.getInstance().isOnThread();
+            }
+        });
+
         /* The client half of the addons, picked up before anything client side is posted. Their
          * common half is registered by BBSMod, from the "bbs-addon" entrypoint. */
         FabricLoader.getInstance()

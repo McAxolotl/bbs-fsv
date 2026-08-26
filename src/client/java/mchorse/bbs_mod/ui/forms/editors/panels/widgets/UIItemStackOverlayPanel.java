@@ -1,6 +1,7 @@
 package mchorse.bbs_mod.ui.forms.editors.panels.widgets;
 
 import com.mojang.brigadier.StringReader;
+import mchorse.bbs_mod.data.GameRegistries;
 import mchorse.bbs_mod.ui.UIKeys;
 import mchorse.bbs_mod.ui.framework.elements.UIElement;
 import mchorse.bbs_mod.ui.framework.elements.input.UITrackpad;
@@ -14,7 +15,7 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKey;
@@ -72,7 +73,7 @@ public class UIItemStackOverlayPanel extends UIOverlayPanel
             try
             {
                 NbtCompound nbtCompound = new StringNbtReader(new StringReader(v)).parseCompound();
-                ItemStack itemStack = ItemStack.CODEC.parse(NbtOps.INSTANCE, nbtCompound).result().orElse(ItemStack.EMPTY);
+                ItemStack itemStack = ItemStack.CODEC.parse(GameRegistries.nbtOps(), nbtCompound).result().orElse(ItemStack.EMPTY);
 
                 this.pickItemStack(itemStack);
                 this.itemList.list.setCurrentScroll(Registries.ITEM.getId(this.stack.getItem()).toString());
@@ -102,7 +103,10 @@ public class UIItemStackOverlayPanel extends UIOverlayPanel
 
     private void updateNbt()
     {
-        this.nbt.setText((ItemStack.CODEC.encodeStart(NbtOps.INSTANCE, this.stack).result().get()).asString());
+        /* orElse, not get(): an encode can legitimately fail (an item whose components this
+         * registry set doesn't own), and a picker that throws is worse than one showing {}. */
+        this.nbt.setText(ItemStack.CODEC.encodeStart(GameRegistries.nbtOps(), this.stack)
+            .result().map(NbtElement::asString).orElse("{}"));
     }
 
     private void pickItemStack(ItemStack itemStack)
