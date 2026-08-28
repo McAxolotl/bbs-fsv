@@ -164,6 +164,15 @@ public class MobFormRenderer extends FormRenderer<MobForm> implements ITickable
             this.lastNBT = nbt;
             this.lastSlim = slim;
             this.entity = null;
+
+            /* A new entity must re-derive the paused frame: the old frozen
+             * transition/look/age belong to the previous mob. animationPaused
+             * itself is kept — it mirrors form.paused and still applies. */
+            this.pausedTransition = 0F;
+            this.pausedLookCaptured = false;
+            this.pauseCaptureOpen = false;
+            this.lastRenderAge = Integer.MIN_VALUE;
+            this.lastRenderPriority = 0;
         }
 
         if (this.entity != null)

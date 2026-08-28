@@ -249,7 +249,7 @@ public class UIBoneTreeList extends UIStringList
             {
                 String label = this.labelOf(key);
 
-                this.metas.put(key, new Meta(0, 0, true, label, label));
+                this.metas.put(key, new Meta(0, 0, true, label == null ? key : label, label == null ? key : label));
             }
         }
 
@@ -270,7 +270,7 @@ public class UIBoneTreeList extends UIStringList
             if (hidden == null || !hidden.test(bone))
             {
                 String label = labelOf == null ? bone : labelOf.apply(bone);
-                Node node = new Node(bone, label, label);
+                Node node = new Node(bone, label == null ? bone : label, label == null ? bone : label);
 
                 node.children.addAll(children);
                 nodes.add(node);
@@ -353,7 +353,8 @@ public class UIBoneTreeList extends UIStringList
 
             if (keys.contains(key))
             {
-                Node node = new Node(key, labelOf == null ? bone : labelOf.apply(bone), owner.getTrackName(key));
+                String label = labelOf == null ? bone : labelOf.apply(bone);
+                Node node = new Node(key, label == null ? bone : label, owner.getTrackName(key));
 
                 node.children.addAll(children);
                 nodes.add(node);
