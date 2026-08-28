@@ -137,6 +137,7 @@ public class FormUtils
         {
             tracks.add(mobForm.pose);
             tracks.add(mobForm.poseOverlay);
+            tracks.addAll(mobForm.additionalOverlays);
         }
         else
         {

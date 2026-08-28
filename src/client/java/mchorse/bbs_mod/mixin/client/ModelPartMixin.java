@@ -73,12 +73,14 @@ public abstract class ModelPartMixin
         MobRenderContext.captureRotationOffset(part, pitch, yaw, roll);
 
         /* The base rotation converges the vanilla animation angles toward the
-         * part's default (fix pulls the bone out of the animation clock). Slerp
-         * keeps the intermediate 0<fix<1 transition on the shortest rotation
-         * path — component-wise euler lerp could wobble on multi-axis angles.
-         * The pose edit layer is composed on top either way, so a fixed bone
-         * stays editable. */
-        Quaternionf rotation = new Quaternionf().rotationZYX(roll, yaw, pitch);
+         * part's default (fix pulls the bone out of the animation clock). The
+         * slerp starts from the ORIGINAL angles — not the euler-lerped ones
+         * above — so the matrix converges by exactly {@code fix}, matching the
+         * euler offset handed to the gizmo; slerp just keeps the 0<fix<1 path
+         * on the shortest rotation instead of a possibly-wobbling euler one.
+         * The pose edit layer composes on top either way, so a fixed bone stays
+         * editable. */
+        Quaternionf rotation = new Quaternionf().rotationZYX(part.roll, part.yaw, part.pitch);
 
         if (transform != null && transform.fix > 0F)
         {

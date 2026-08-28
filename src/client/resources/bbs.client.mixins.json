@@ -20,7 +20,6 @@
         "LivingEntityFilmUseMixin",
         "ClientPlayerEntityFilmUseMixin",
         "LivingEntityUpdateMixin",
-        "LivingEntityRendererMixin",
         "LivingEntityRendererAccessor",
         "ModelPartMixin",
         "iris.SystemTimeUniformsTimerMixin",
