@@ -1,6 +1,7 @@
 package mchorse.bbs_mod.mixin.client;
 
 import mchorse.bbs_mod.forms.renderers.MobFormRenderer;
+import mchorse.bbs_mod.forms.renderers.MobRenderContext;
 import mchorse.bbs_mod.utils.pose.Pose;
 import mchorse.bbs_mod.utils.pose.PoseTransform;
 import mchorse.bbs_mod.utils.pose.Transform;
@@ -23,6 +24,13 @@ public abstract class LivingEntityRendererMixin
     @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/model/EntityModel;setAngles(Lnet/minecraft/entity/Entity;FFFFF)V", ordinal = 0, shift = At.Shift.AFTER))
     public void onSetAngles(LivingEntity livingEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo info)
     {
+        /* The per-part ModelPartMixin takeover handles bone editing (and the quaternion pose
+         * mode) — the field-based overlay below must not double-apply on top of it. */
+        if (MobRenderContext.isActive())
+        {
+            return;
+        }
+
         Pose pose = MobFormRenderer.getCurrentPose();
         Pose poseOverlay = MobFormRenderer.getCurrentPoseOverlay();
 
@@ -98,6 +106,11 @@ public abstract class LivingEntityRendererMixin
     @Inject(method = "render", at = @At("TAIL"))
     public void onRenderEnd(LivingEntity livingEntity, float f, float g, MatrixStack matrixStack, VertexConsumerProvider vertexConsumerProvider, int i, CallbackInfo info)
     {
+        if (MobRenderContext.isActive())
+        {
+            return;
+        }
+
         for (Map.Entry<ModelPart, Transform> entry : MobFormRenderer.getCache().entrySet())
         {
             Transform transform = entry.getValue();
