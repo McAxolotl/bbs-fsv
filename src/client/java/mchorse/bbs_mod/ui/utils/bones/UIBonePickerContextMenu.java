@@ -12,6 +12,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.Collection;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -60,6 +61,14 @@ public class UIBonePickerContextMenu extends UIContextMenu
     public UIBonePickerContextMenu attachments(Form form, Collection<String> keys)
     {
         this.bones.fillAttachments(form, keys);
+
+        return this;
+    }
+
+    /** Display-name resolver forwarded to the inner tree; see {@link UIBoneTreeList#labels}. */
+    public UIBonePickerContextMenu labels(Function<String, String> labelOf)
+    {
+        this.bones.labels(labelOf);
 
         return this;
     }

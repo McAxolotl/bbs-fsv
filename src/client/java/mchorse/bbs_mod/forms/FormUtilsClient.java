@@ -10,6 +10,7 @@ import mchorse.bbs_mod.forms.forms.FramebufferForm;
 import mchorse.bbs_mod.forms.forms.ItemForm;
 import mchorse.bbs_mod.forms.forms.LabelForm;
 import mchorse.bbs_mod.forms.forms.MobForm;
+import mchorse.bbs_mod.forms.renderers.BoneHierarchy;
 import mchorse.bbs_mod.forms.forms.ModelForm;
 import mchorse.bbs_mod.forms.forms.ParticleForm;
 import mchorse.bbs_mod.forms.forms.TrailForm;
@@ -175,6 +176,25 @@ public class FormUtilsClient
         }
 
         return Collections.emptyList();
+    }
+
+    /**
+     * The readable display name of a bone id for UI surfaces that are not the pose editor's own
+     * tree (film bone tracks, pickers, viewport hover cards). Model bones are already readable;
+     * MobForm ids are canonical {@code layer/path} keys that {@link BoneHierarchy#getLabel}
+     * shortens. Falls back to the id itself.
+     */
+    public static String getBoneLabel(Form form, String bone)
+    {
+        if (form instanceof MobForm && bone != null)
+        {
+            BoneHierarchy hierarchy = getRenderer(form).getBoneHierarchy();
+            String label = hierarchy.getLabel(bone);
+
+            return label == null ? bone : label;
+        }
+
+        return bone;
     }
 
     public static interface IFormRendererFactory <T extends Form>

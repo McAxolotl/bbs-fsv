@@ -6,7 +6,10 @@ import mchorse.bbs_mod.forms.FormUtils;
 import mchorse.bbs_mod.forms.FormUtilsClient;
 import mchorse.bbs_mod.forms.forms.MobForm;
 import mchorse.bbs_mod.forms.forms.ModelForm;
+import mchorse.bbs_mod.forms.renderers.BoneHierarchy;
+import mchorse.bbs_mod.forms.renderers.MobFormRenderer;
 import mchorse.bbs_mod.forms.renderers.ModelFormRenderer;
+import mchorse.bbs_mod.forms.renderers.VanillaModel;
 import mchorse.bbs_mod.settings.values.IValueListener;
 import mchorse.bbs_mod.ui.UIKeys;
 import mchorse.bbs_mod.ui.film.UIFilmPanel;
@@ -57,10 +60,11 @@ public class UIPoseKeyframeFactory extends UIKeyframeFactory<Pose>
         }
         else if (FormUtils.getForm(sheet.property) instanceof MobForm mobForm)
         {
-            List<String> bones = FormUtilsClient.getRenderer(mobForm).getBones();
+            BoneHierarchy hierarchy = ((MobFormRenderer) FormUtilsClient.getRenderer(mobForm)).getBoneHierarchy();
 
             this.poseEditor.setPose(keyframe.getValue(), "");
-            this.poseEditor.fillGroups(bones, false);
+            this.poseEditor.groups.list.labels(hierarchy::getLabel);
+            this.poseEditor.fillGroups(new VanillaModel(hierarchy), hierarchy.buildFlippedParts(), false);
         }
 
         this.scroll.add(this.poseEditor);

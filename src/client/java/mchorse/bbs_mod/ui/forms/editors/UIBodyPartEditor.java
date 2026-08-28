@@ -6,9 +6,14 @@ import mchorse.bbs_mod.forms.FormUtils;
 import mchorse.bbs_mod.forms.FormUtilsClient;
 import mchorse.bbs_mod.forms.forms.BodyPart;
 import mchorse.bbs_mod.forms.forms.Form;
+import mchorse.bbs_mod.forms.forms.MobForm;
 import mchorse.bbs_mod.forms.forms.ModelForm;
+import mchorse.bbs_mod.forms.renderers.BoneHierarchy;
+import mchorse.bbs_mod.forms.renderers.MobFormRenderer;
 import mchorse.bbs_mod.forms.renderers.ModelFormRenderer;
+import mchorse.bbs_mod.forms.renderers.VanillaModel;
 import mchorse.bbs_mod.l10n.keys.IKey;
+import mchorse.bbs_mod.settings.values.numeric.ValueBoolean;
 import mchorse.bbs_mod.ui.Keys;
 import mchorse.bbs_mod.ui.UIKeys;
 import mchorse.bbs_mod.ui.framework.elements.UIScrollView;
@@ -50,10 +55,11 @@ public class UIBodyPartEditor extends UIScrollView
                 current.part.setForm(FormUtils.copy(f));
 
                 Form partForm = current.part.getForm();
+                ValueBoolean boneTracks = FormUtils.getBoneTracks(partForm);
 
-                if (partForm instanceof ModelForm m)
+                if (boneTracks != null)
                 {
-                    m.boneTracks.set(false);
+                    boneTracks.set(false);
                 }
 
                 if (partForm != null && partForm.getFormId().contains("particle"))
@@ -98,9 +104,16 @@ public class UIBodyPartEditor extends UIScrollView
                  * hide unless the pose setting shows them. */
                 picker.bones(model.model, BBSSettings.poseShowDisabledBones.get() ? null : model.getDisabledBones());
             }
+            else if (this.owner instanceof MobForm mobForm)
+            {
+                /* The mob's bones have a real hierarchy — show the tree with readable labels. */
+                BoneHierarchy hierarchy = ((MobFormRenderer) FormUtilsClient.getRenderer(mobForm)).getBoneHierarchy();
+
+                picker.labels(hierarchy::getLabel).bones(new VanillaModel(hierarchy), null);
+            }
             else
             {
-                /* Bones without a model tree (mob forms' model parts) list flat. */
+                /* Bones without a model tree list flat. */
                 List<String> bones = new ArrayList<>(FormUtilsClient.getBones(this.owner));
 
                 bones.sort(String::compareToIgnoreCase);
@@ -168,7 +181,7 @@ public class UIBodyPartEditor extends UIScrollView
 
     private IKey boneLabel(String bone)
     {
-        return bone == null || bone.isEmpty() ? UIKeys.MODEL_EDITOR_PICK_BONE : IKey.constant(bone);
+        return bone == null || bone.isEmpty() ? UIKeys.MODEL_EDITOR_PICK_BONE : IKey.constant(FormUtilsClient.getBoneLabel(this.owner, bone));
     }
 
     /** Attach the active body part to the clicked parent bone; returns whether it did. */
