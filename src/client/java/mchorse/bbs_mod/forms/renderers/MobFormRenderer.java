@@ -29,7 +29,6 @@ import mchorse.bbs_mod.utils.colors.Color;
 import mchorse.bbs_mod.utils.joml.Vectors;
 import mchorse.bbs_mod.utils.pose.Pose;
 import mchorse.bbs_mod.utils.pose.PoseTransform;
-import mchorse.bbs_mod.utils.pose.Transform;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.network.OtherClientPlayerEntity;
@@ -54,20 +53,12 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 public class MobFormRenderer extends FormRenderer<MobForm> implements ITickable
 {
-    private static final Map<Class, Map<String, ModelPart>> parts = new HashMap<>();
-    private static final Map<ModelPart, Transform> cache = new HashMap<>();
-
     public static final GameProfile WIDE = new GameProfile(UUID.fromString("b99a2400-28a8-4288-92dc-924beafbf756"), "McHorseYT");
     public static final GameProfile SLIM = new GameProfile(UUID.fromString("5477bd28-e672-4f87-a209-c03cf75f3606"), "osmiq");
     private static final VertexConsumer EMPTY_VERTEX_CONSUMER = new EmptyVertexConsumer();
@@ -114,29 +105,6 @@ public class MobFormRenderer extends FormRenderer<MobForm> implements ITickable
     /** Bone matrices collected during the last render, keyed by canonical bone ID. */
     private MatrixCache bones = new MatrixCache();
     private List<String> pickedBoneIds = List.of();
-
-    public static Map<Class, Map<String, ModelPart>> getParts()
-    {
-        return parts;
-    }
-
-    public static Map<ModelPart, Transform> getCache()
-    {
-        return cache;
-    }
-
-    /* Kept for the legacy LivingEntityRendererMixin overlay path, which is skipped whenever a
-     * MobRenderContext is active (the ModelPartMixin takeover handles bone editing instead). */
-
-    public static Pose getCurrentPose()
-    {
-        return null;
-    }
-
-    public static Pose getCurrentPoseOverlay()
-    {
-        return null;
-    }
 
     public MobFormRenderer(MobForm form)
     {
