@@ -24,6 +24,7 @@ import mchorse.bbs_mod.forms.entities.IEntity;
 import mchorse.bbs_mod.forms.forms.BodyPart;
 import mchorse.bbs_mod.forms.forms.Form;
 import mchorse.bbs_mod.forms.forms.ModelForm;
+import mchorse.bbs_mod.settings.values.numeric.ValueBoolean;
 import mchorse.bbs_mod.forms.renderers.ModelFormRenderer;
 import mchorse.bbs_mod.graphics.window.Window;
 import mchorse.bbs_mod.l10n.L10n;
@@ -820,11 +821,12 @@ public class UIReplaysEditor extends UIElement
             this.keyframeEditor.view.duration(() -> this.film.camera.calculateDuration());
             this.keyframeEditor.view.context(menu ->
             {
-                if (this.replay.form.get() instanceof ModelForm modelForm)
-                {
-                    int mouseY = this.getContext().mouseY;
-                    UIKeyframeSheet sheet = this.keyframeEditor.view.getGraph().getSheet(mouseY);
+                Form replayForm = this.replay.form.get();
+                int mouseY = this.getContext().mouseY;
+                UIKeyframeSheet sheet = this.keyframeEditor.view.getGraph().getSheet(mouseY);
 
+                if (replayForm instanceof ModelForm modelForm)
+                {
                     if (sheet != null && sheet.channel.getFactory() == KeyframeFactories.POSE && sheet.id.equals("pose"))
                     {
                         menu.action(Icons.POSE, UIKeys.FILM_REPLAY_CONTEXT_ANIMATION_TO_KEYFRAMES, () ->
@@ -849,27 +851,6 @@ public class UIReplaysEditor extends UIElement
                         });
                     }
 
-                    boolean isPoseTrack = sheet != null
-                        && sheet.channel.getFactory() == KeyframeFactories.POSE
-                        && (sheet.id.equals("pose")
-                        || sheet.id.endsWith(FormUtils.PATH_SEPARATOR + "pose"))
-                        && !sheet.id.contains("pose_overlay");
-
-                    Form sheetForm = sheet != null && sheet.property != null ? FormUtils.getForm(sheet.property) : null;
-                    boolean limbTracksOn = sheetForm instanceof ModelForm m && m.boneTracks.get();
-
-                    if (isPoseTrack && sheet.selection.hasAny() && limbTracksOn)
-                    {
-                        ModelForm poseModelForm = sheetForm instanceof ModelForm m ? m : modelForm;
-                        menu.action(Icons.LIMB, UIKeys.FILM_REPLAY_CONTEXT_POSES_TO_LIMBS, () ->
-                        {
-                            UIReplaysEditorUtils.posesToLimbTracks(this.replay, sheet, poseModelForm);
-
-                            sheet.selection.removeSelected();
-                            this.updateChannelsList();
-                        });
-                    }
-
                     List<String> controllers = ModelIKRuntime.getControllers(ModelFormRenderer.getModel(modelForm));
                     if (!controllers.isEmpty())
                     {
@@ -881,15 +862,37 @@ public class UIReplaysEditor extends UIElement
                     }
                 }
 
+                boolean isPoseTrack = sheet != null
+                    && sheet.channel.getFactory() == KeyframeFactories.POSE
+                    && (sheet.id.equals("pose")
+                    || sheet.id.endsWith(FormUtils.PATH_SEPARATOR + "pose"))
+                    && !sheet.id.contains("pose_overlay");
+
+                Form sheetForm = sheet != null && sheet.property != null ? FormUtils.getForm(sheet.property) : null;
+                ValueBoolean boneTracks = FormUtils.getBoneTracks(sheetForm);
+                boolean limbTracksOn = boneTracks != null && boneTracks.get();
+
+                if (isPoseTrack && sheet.selection.hasAny() && limbTracksOn)
+                {
+                    Form poseForm = sheetForm != null ? sheetForm : replayForm;
+                    menu.action(Icons.LIMB, UIKeys.FILM_REPLAY_CONTEXT_POSES_TO_LIMBS, () ->
+                    {
+                        UIReplaysEditorUtils.posesToLimbTracks(this.replay, sheet, poseForm);
+
+                        sheet.selection.removeSelected();
+                        this.updateChannelsList();
+                    });
+                }
+
                 if (this.keyframeEditor.view.getGraph() instanceof UIKeyframeDopeSheet)
                 {
                     menu.action(Icons.FILTER, UIKeys.FILM_REPLAY_FILTER_SHEETS, () ->
                     {
                         Set<String> disabledSet = BBSSettings.disabledSheets.get();
                         Map<String, Integer> keyToColor = new HashMap<>();
-                        for (UIKeyframeSheet sheet : this.keyframeEditor.view.getGraph().getSheets())
+                        for (UIKeyframeSheet candidate : this.keyframeEditor.view.getGraph().getSheets())
                         {
-                            keyToColor.put(getSheetFilterKey(sheet), sheet.color);
+                            keyToColor.put(getSheetFilterKey(candidate), candidate.color);
                         }
                         UIKeyframeSheetFilterOverlayPanel panel = new UIKeyframeSheetFilterOverlayPanel(
                                 disabledSet,
@@ -1177,10 +1180,13 @@ public class UIReplaysEditor extends UIElement
             List<UIKeyframeSheet> materialSheets = new ArrayList<>();
             UIReplaysEditorUtils.addMaterialTextureSheets(modelForm, this.replay.properties, materialSheets);
             orderedFormSheets.addAll(materialSheets);
+        }
 
+        if (FormUtils.getBoneTracks(form) != null)
+        {
             List<UIKeyframeSheet> boneSheets = new ArrayList<>();
             Map<String, Integer> depthBySheetId = new HashMap<>();
-            UIReplaysEditorUtils.addBoneTrackSheets(modelForm, this.replay.properties, boneSheets, depthBySheetId);
+            UIReplaysEditorUtils.addBoneTrackSheets(form, this.replay.properties, boneSheets, depthBySheetId);
 
             for (UIKeyframeSheet boneSheet : boneSheets)
             {
@@ -1371,7 +1377,7 @@ public class UIReplaysEditor extends UIElement
      */
     private void pickFormBone(Form form, String bone, boolean insert)
     {
-        if (form instanceof ModelForm && bone != null && !bone.isEmpty())
+        if (FormUtils.getBoneTracks(form) != null && bone != null && !bone.isEmpty())
         {
             if (this.allMode)
             {

@@ -99,7 +99,7 @@ public class UIAnchorKeyframeFactory extends UIKeyframeFactory<Anchor>
          * old alphabetical strip that shuffled every part's bones together. */
         UIBonePickerContextMenu picker = new UIBonePickerContextMenu(consumer);
 
-        picker.attachments(form, attachments).set(value);
+        picker.labels((key) -> FormUtilsClient.getBoneLabel(form, key)).attachments(form, attachments).set(value);
         panel.getContext().replaceContextMenu(picker);
     }
 

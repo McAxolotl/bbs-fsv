@@ -253,7 +253,7 @@ public class UIKeyframePreviewTooltip implements ITooltip
         PerLimbService.PoseBonePath path = keyframe.getFactory() == KeyframeFactories.POSE_TRANSFORM
             ? PerLimbService.parsePoseBonePath(sheet.id)
             : null;
-        String label = path == null ? null : path.bone();
+        String label = path == null ? null : FormUtilsClient.getBoneLabel(form, path.bone());
 
         int w = FORM_SIZE;
         int h = FORM_SIZE;
@@ -351,13 +351,14 @@ public class UIKeyframePreviewTooltip implements ITooltip
         /* Bone track: the keyframe's transform stacks onto the base pose's bone,
          * matching FormProperties.applyProperty */
         PerLimbService.PoseBonePath path = PerLimbService.parsePoseBonePath(sheet.id);
+        ValuePose poseValue = FormUtils.getEditablePose(copy);
 
-        if (path == null || !(copy instanceof ModelForm modelForm) || !(value instanceof Transform boneValue))
+        if (path == null || poseValue == null || !(value instanceof Transform boneValue))
         {
             return null;
         }
 
-        Pose pose = modelForm.pose.get();
+        Pose pose = poseValue.get();
         PoseTransform transform = pose.transforms.get(path.bone());
 
         if (transform == null)

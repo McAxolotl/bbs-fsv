@@ -12,6 +12,7 @@ import mchorse.bbs_mod.forms.states.AnimationState;
 import mchorse.bbs_mod.settings.values.base.BaseValue;
 import mchorse.bbs_mod.settings.values.base.BaseValueBasic;
 import mchorse.bbs_mod.settings.values.core.ValuePose;
+import mchorse.bbs_mod.settings.values.numeric.ValueBoolean;
 import mchorse.bbs_mod.utils.CollectionUtils;
 import mchorse.bbs_mod.utils.StringUtils;
 import mchorse.bbs_mod.utils.keyframes.KeyframeChannel;
@@ -36,6 +37,55 @@ public class FormUtils
             || name.startsWith("pose")
             || name.startsWith("pose_overlay")
             || name.startsWith("shape_keys");
+    }
+
+    /* Pose-capable form dispatch — the shared editable-pose plumbing (pose editor, gizmo,
+     * bone tracks, recording) without a PoseForm interface on the forms themselves.
+     * {@code null} means the form type has no editable pose. */
+
+    public static ValuePose getEditablePose(Form form)
+    {
+        if (form instanceof ModelForm m)
+        {
+            return m.pose;
+        }
+
+        if (form instanceof MobForm m)
+        {
+            return m.pose;
+        }
+
+        return null;
+    }
+
+    public static ValuePose getEditablePoseOverlay(Form form)
+    {
+        if (form instanceof ModelForm m)
+        {
+            return m.poseOverlay;
+        }
+
+        if (form instanceof MobForm m)
+        {
+            return m.poseOverlay;
+        }
+
+        return null;
+    }
+
+    public static ValueBoolean getBoneTracks(Form form)
+    {
+        if (form instanceof ModelForm m)
+        {
+            return m.boneTracks;
+        }
+
+        if (form instanceof MobForm m)
+        {
+            return m.boneTracks;
+        }
+
+        return null;
     }
 
     /**
@@ -87,6 +137,7 @@ public class FormUtils
         {
             tracks.add(mobForm.pose);
             tracks.add(mobForm.poseOverlay);
+            tracks.addAll(mobForm.additionalOverlays);
         }
         else
         {

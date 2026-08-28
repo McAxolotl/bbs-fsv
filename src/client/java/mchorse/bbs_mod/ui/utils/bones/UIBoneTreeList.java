@@ -2,10 +2,15 @@ package mchorse.bbs_mod.ui.utils.bones;
 
 import mchorse.bbs_mod.cubic.IModel;
 import mchorse.bbs_mod.cubic.ModelInstance;
+import mchorse.bbs_mod.forms.FormUtilsClient;
 import mchorse.bbs_mod.forms.forms.BodyPart;
 import mchorse.bbs_mod.forms.forms.Form;
+import mchorse.bbs_mod.forms.forms.MobForm;
 import mchorse.bbs_mod.forms.forms.ModelForm;
+import mchorse.bbs_mod.forms.renderers.BoneHierarchy;
+import mchorse.bbs_mod.forms.renderers.MobFormRenderer;
 import mchorse.bbs_mod.forms.renderers.ModelFormRenderer;
+import mchorse.bbs_mod.forms.renderers.VanillaModel;
 import mchorse.bbs_mod.l10n.keys.IKey;
 import mchorse.bbs_mod.ui.framework.UIContext;
 import mchorse.bbs_mod.ui.framework.elements.input.list.UIStringList;
@@ -60,6 +65,13 @@ public class UIBoneTreeList extends UIStringList
     private Predicate<String> disabled;
 
     private Function<String, Marker[]> markers;
+
+    /**
+     * Display-name resolver for hosts whose bone ids are stable keys but not readable labels
+     * (a vanilla ModelPart path like {@code minecraft:zombie#main/head}); {@code null} shows the
+     * id itself. The tree row and the flat search label both go through it.
+     */
+    private Function<String, String> labelOf;
 
     /** Left edge of the dot column as the last drawn row placed it — the legend's gate. */
     private int laneX = Integer.MAX_VALUE;
@@ -122,6 +134,19 @@ public class UIBoneTreeList extends UIStringList
         this.flat = flat;
     }
 
+    /** Display-name resolver; see {@link #labelOf}. */
+    public UIBoneTreeList labels(Function<String, String> labelOf)
+    {
+        this.labelOf = labelOf;
+
+        return this;
+    }
+
+    private String labelOf(String id)
+    {
+        return this.labelOf == null || id == null ? id : this.labelOf.apply(id);
+    }
+
     /** First row currently on screen (respecting the search filter) — the Enter pick. */
     public String getFirstVisible()
     {
@@ -146,7 +171,7 @@ public class UIBoneTreeList extends UIStringList
 
         if (model != null)
         {
-            this.emit(boneNodes(model, model.getRootGroupKeys(), hidden), 0, 0, false);
+            this.emit(boneNodes(model, model.getRootGroupKeys(), hidden, this.labelOf), 0, 0, false);
         }
     }
 
@@ -164,7 +189,7 @@ public class UIBoneTreeList extends UIStringList
         {
             Predicate<String> predicate = hidden == null ? null : hidden::contains;
 
-            this.emit(boneNodes(model, model.getRootGroupKeys(), predicate), 0, 0, true);
+            this.emit(boneNodes(model, model.getRootGroupKeys(), predicate, this.labelOf), 0, 0, true);
         }
 
         this.update();
@@ -199,7 +224,7 @@ public class UIBoneTreeList extends UIStringList
 
         if (form != null)
         {
-            this.emit(formNodes(form, "", keySet), 0, 0, true);
+            this.emit(formNodes(form, "", keySet, this.labelOf), 0, 0, true);
         }
 
         /* Safety net: keys the static walk didn't reach (exotic renderers) go in flat,
@@ -215,7 +240,18 @@ public class UIBoneTreeList extends UIStringList
         }
 
         missed.sort(String::compareToIgnoreCase);
-        this.list.addAll(missed);
+
+        for (String key : missed)
+        {
+            this.list.add(key);
+
+            if (this.labelOf != null)
+            {
+                String label = this.labelOf(key);
+
+                this.metas.put(key, new Meta(0, 0, true, label == null ? key : label, label == null ? key : label));
+            }
+        }
 
         this.update();
     }
@@ -223,17 +259,18 @@ public class UIBoneTreeList extends UIStringList
     /* Building the intermediate node tree */
 
     /** A bone (and its visible subtree); a hidden bone dissolves into its children in place. */
-    private static List<Node> boneNodes(IModel model, Collection<String> bones, Predicate<String> hidden)
+    private static List<Node> boneNodes(IModel model, Collection<String> bones, Predicate<String> hidden, Function<String, String> labelOf)
     {
         List<Node> nodes = new ArrayList<>();
 
         for (String bone : bones)
         {
-            List<Node> children = boneNodes(model, model.getDirectChildrenKeys(bone), hidden);
+            List<Node> children = boneNodes(model, model.getDirectChildrenKeys(bone), hidden, labelOf);
 
             if (hidden == null || !hidden.test(bone))
             {
-                Node node = new Node(bone, bone, bone);
+                String label = labelOf == null ? bone : labelOf.apply(bone);
+                Node node = new Node(bone, label == null ? bone : label, label == null ? bone : label);
 
                 node.children.addAll(children);
                 nodes.add(node);
@@ -254,7 +291,7 @@ public class UIBoneTreeList extends UIStringList
      * index must advance for every part, even form-less ones — that is how
      * collectMatrices numbers the paths.
      */
-    private static List<Node> formNodes(Form form, String path, Set<String> keys)
+    private static List<Node> formNodes(Form form, String path, Set<String> keys, Function<String, String> labelOf)
     {
         List<Node> children = new ArrayList<>();
 
@@ -264,7 +301,16 @@ public class UIBoneTreeList extends UIStringList
 
             if (instance != null && instance.model != null)
             {
-                children.addAll(formBoneNodes(form, instance.model, instance.model.getRootGroupKeys(), path, keys));
+                children.addAll(formBoneNodes(form, instance.model, instance.model.getRootGroupKeys(), path, keys, labelOf));
+            }
+        }
+        else if (form instanceof MobForm mobForm)
+        {
+            BoneHierarchy hierarchy = ((MobFormRenderer) FormUtilsClient.getRenderer(mobForm)).getBoneHierarchy();
+
+            if (hierarchy != null && !hierarchy.getRootIds().isEmpty())
+            {
+                children.addAll(formBoneNodes(form, new VanillaModel(hierarchy), hierarchy.getRootIds(), path, keys, labelOf));
             }
         }
 
@@ -276,7 +322,7 @@ public class UIBoneTreeList extends UIStringList
 
             if (child != null)
             {
-                children.addAll(formNodes(child, StringUtils.combinePaths(path, String.valueOf(i)), keys));
+                children.addAll(formNodes(child, StringUtils.combinePaths(path, String.valueOf(i)), keys, labelOf));
             }
 
             i += 1;
@@ -296,18 +342,19 @@ public class UIBoneTreeList extends UIStringList
         return new ArrayList<>(List.of(node));
     }
 
-    private static List<Node> formBoneNodes(Form owner, IModel model, Collection<String> bones, String formPath, Set<String> keys)
+    private static List<Node> formBoneNodes(Form owner, IModel model, Collection<String> bones, String formPath, Set<String> keys, Function<String, String> labelOf)
     {
         List<Node> nodes = new ArrayList<>();
 
         for (String bone : bones)
         {
             String key = StringUtils.combinePaths(formPath, bone);
-            List<Node> children = formBoneNodes(owner, model, model.getDirectChildrenKeys(bone), formPath, keys);
+            List<Node> children = formBoneNodes(owner, model, model.getDirectChildrenKeys(bone), formPath, keys, labelOf);
 
             if (keys.contains(key))
             {
-                Node node = new Node(key, bone, owner.getTrackName(key));
+                String label = labelOf == null ? bone : labelOf.apply(bone);
+                Node node = new Node(key, label == null ? bone : label, owner.getTrackName(key));
 
                 node.children.addAll(children);
                 nodes.add(node);
