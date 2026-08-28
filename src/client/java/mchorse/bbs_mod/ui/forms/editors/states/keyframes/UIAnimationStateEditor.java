@@ -302,9 +302,9 @@ public class UIAnimationStateEditor extends UIElement
         sheets.addAll(formSheets);
         formSheets.clear();
 
-        if (form instanceof ModelForm modelForm)
+        if (FormUtils.getBoneTracks(form) != null)
         {
-            UIReplaysEditorUtils.addBoneTrackSheets(modelForm, this.state.properties, sheets);
+            UIReplaysEditorUtils.addBoneTrackSheets(form, this.state.properties, sheets);
         }
     }
 

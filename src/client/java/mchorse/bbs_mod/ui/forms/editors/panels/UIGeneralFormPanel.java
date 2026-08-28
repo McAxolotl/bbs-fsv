@@ -1,8 +1,10 @@
 package mchorse.bbs_mod.ui.forms.editors.panels;
 
+import mchorse.bbs_mod.forms.FormUtils;
 import mchorse.bbs_mod.forms.forms.Form;
 import mchorse.bbs_mod.forms.forms.ModelForm;
 import mchorse.bbs_mod.l10n.keys.IKey;
+import mchorse.bbs_mod.settings.values.numeric.ValueBoolean;
 import mchorse.bbs_mod.ui.UIKeys;
 import mchorse.bbs_mod.ui.film.replays.UIReplaysEditor;
 import mchorse.bbs_mod.ui.film.replays.UIReplaysEditorUtils;
@@ -67,7 +69,9 @@ public class UIGeneralFormPanel extends UIFormPanel
         this.filterTracks.tooltip(UIKeys.FORMS_EDITORS_GENERAL_FILTER_TRACKS_TOOLTIP);
         this.boneTracks = new UIToggle(UIKeys.FORMS_EDITORS_GENERAL_BONE_TRACKS, (b) ->
         {
-            if (this.form instanceof ModelForm m) m.boneTracks.set(b.getValue());
+            ValueBoolean boneTracks = FormUtils.getBoneTracks(this.form);
+
+            if (boneTracks != null) boneTracks.set(b.getValue());
         });
         this.boneTracks.tooltip(UIKeys.FORMS_EDITORS_GENERAL_BONE_TRACKS_TOOLTIP);
         this.trackName = new UITextbox(120, (t) -> this.form.trackName.set(t));
@@ -151,9 +155,11 @@ public class UIGeneralFormPanel extends UIFormPanel
         this.hotkey.setKeyCombo(new KeyCombo(IKey.EMPTY, form.hotkey.get()));
 
         this.visible.setValue(form.visible.get());
-        if (form instanceof ModelForm m)
+        ValueBoolean boneTracks = FormUtils.getBoneTracks(form);
+
+        if (boneTracks != null)
         {
-            this.boneTracks.setValue(m.boneTracks.get());
+            this.boneTracks.setValue(boneTracks.get());
             this.boneTracks.setVisible(true);
         }
         else
