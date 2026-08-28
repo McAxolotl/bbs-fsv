@@ -48,6 +48,15 @@ public abstract class FormRenderer <T extends Form>
         return Collections.emptyList();
     }
 
+    /**
+     * The form's editable bone hierarchy, or {@link BoneHierarchy#EMPTY} for forms without bones.
+     * MobForm overrides this with the discovered vanilla {@code ModelPart} tree.
+     */
+    public BoneHierarchy getBoneHierarchy()
+    {
+        return BoneHierarchy.EMPTY;
+    }
+
     public final void renderUI(UIContext context, int x1, int y1, int x2, int y2)
     {
         this.renderInUI(context, x1, y1, x2, y2);
